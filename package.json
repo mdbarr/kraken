@@ -12,5 +12,8 @@
   },
   "scripts": {
     "lint": "eslint *.js"
+  },
+  "dependencies": {
+    "@mdbarr/uscript": "^0.1.0"
   }
 }
