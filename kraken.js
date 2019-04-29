@@ -4,12 +4,15 @@
 require('barrkeep/pp');
 
 const fs = require('fs');
-const yaml = require('js-yaml');
+const path = require('path');
+//const yaml = require('js-yaml');
+const mkdirp = require('mkdirp');
+const rimraf = require('rimraf');
 const minimist = require('minimist');
 const { execSync } = require('child_process');
 const { Uscript } = require('@mdbarr/uscript');
 
-const WORKSPACE = process.env.WORKSPACE || process.cwd();
+const WORKSPACE = process.env.WORKSPACE || path.join(process.cwd(), './work');
 
 //////////
 
@@ -17,6 +20,86 @@ function Kraken(options = {}) {
   const kraken = this;
 
   kraken.version = require('./package').version;
+
+  //////////
+
+  kraken.modules = require('./modules');
+
+  kraken.prep = function(step, frame) {
+    for (const property in step) {
+      if (typeof step[property] === 'string') {
+        step[property] = kraken.handlebars(step[property], frame);
+      }
+    }
+  };
+
+  kraken.when = function(object, frame) {
+    if (object.when !== undefined) {
+      const when = kraken.handlebars(object.when, frame);
+      console.log('[WHEN]', object.when, when);
+
+      if (!when || when === 'false' || when === 'undefined' ||
+          when === 'null' || when === '0') {
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  kraken.step = function(object) {
+    console.pp(object);
+    if (object.foreach && object.steps) {
+      const steps = [];
+
+      const [ , variable, which ] = object.foreach.match(/^(.*?)\s+in\s+(.*?)$/i);
+
+      const container = kraken.uscript.eval(which);
+      for (const item in container) {
+        const frame = Object.assign({ [variable]: item }, container[item]);
+
+        console.pp(frame);
+
+        console.log('WHEN', object.when);
+        if (!kraken.when(object, frame)) {
+          continue;
+        }
+        console.log('WHEN<<');
+
+        if (object.cwd) {
+          kraken.cd(object.cwd, frame);
+        }
+
+        for (let step of object.steps) {
+          step = Object.assign({}, step);
+          kraken.prep(step, frame);
+
+          steps.push(step);
+        }
+        steps.reverse();
+        steps.forEach(kraken.step);
+      }
+    } else {
+      for (const module in kraken.modules) {
+        if (object.hasOwnProperty(module)) {
+          console.log(`[${ module }] ${ object[module] }`);
+
+          if (!kraken.when(object)) {
+            continue;
+          }
+
+          if (object.cwd) {
+            kraken.cd(object.cwd);
+          }
+
+          // Try / Catch?
+          return kraken.modules[module](kraken, object);
+        }
+      }
+    }
+    // Unknown step
+    return null;
+  };
 
   //////////
 
@@ -44,7 +127,7 @@ function Kraken(options = {}) {
   kraken.steps = require('./release');
 
   kraken.environment = {
-    WORKSPACE,
+    workspace: WORKSPACE,
     config: kraken.config,
     message,
     nightly,
@@ -59,7 +142,7 @@ function Kraken(options = {}) {
 
   kraken.uscript = new Uscript({ environment: kraken.environment });
 
-  const handlebars = function(string, env) {
+  kraken.handlebars = function(string, env) {
     return string.replace(/{{(.*?)}}/g, (match, expression) => {
       return kraken.uscript.eval(expression.trim(), env);
     });
@@ -69,10 +152,25 @@ function Kraken(options = {}) {
     if (options['dry-run'] || options.dryRun) {
       console.log('[TEST] >', command);
     } else {
-      const result = execSync(command, commandOptions);
+      console.log('[EXEC] >', command);
+      const result = execSync(command, commandOptions).toString();
       kraken.log.push(result);
       console.log(result);
     }
+  };
+
+  kraken.cd = function(directory, frame) {
+    directory = kraken.handlebars(directory, frame);
+
+    const cwd = path.resolve(directory);
+
+    console.log('CWD', cwd);
+
+    //process.chdir(cwd);
+
+    kraken.environment.cwd = cwd;
+
+    return cwd;
   };
 
   kraken.start = function() {
@@ -90,20 +188,26 @@ function Kraken(options = {}) {
     console.log(`Kraken Release Engineering v${ kraken.version }`);
     console.log();
 
-    process.cwd('./tmp');
+    mkdirp.sync(kraken.environment.workspace);
+    kraken.cd(kraken.environment.workspace);
 
     // Steps
 
-    for (const step of steps) {
-
+    for (const step of kraken.steps) {
+      console.log(step);
+      kraken.step(step);
     }
 
     //
 
-    process.cwd(__dirname);
+    process.chdir(__dirname);
+    rimraf.sync('./work');
   };
 }
 
 const args = minimist(process.argv.slice(2));
+
+args['dry-run'] = true;
+
 const kraken = new Kraken(args);
 kraken.start();
