@@ -78,6 +78,8 @@ function Kraken(options = {}) {
         }
         steps.reverse();
         steps.forEach(kraken.step);
+
+        kraken.cd();
       }
     } else {
       for (const module in kraken.modules) {
@@ -93,7 +95,11 @@ function Kraken(options = {}) {
           }
 
           // Try / Catch?
-          return kraken.modules[module](kraken, object);
+          const result = kraken.modules[module](kraken, object);
+
+          kraken.cd();
+
+          return result;
         }
       }
     }
@@ -159,18 +165,30 @@ function Kraken(options = {}) {
     }
   };
 
+  kraken.$directories = [];
   kraken.cd = function(directory, frame) {
+    if (directory === undefined || directory === '-') {
+      const change = kraken.$directories.unshift();
+
+      //process.chdir(change.from);
+      kraken.environment.cwd = change.from;
+      return change.from;
+    }
+
     directory = kraken.handlebars(directory, frame);
 
     const cwd = path.resolve(directory);
 
-    console.log('CWD', cwd);
+    const change = {
+      from: process.cwd(),
+      to: cwd
+    };
 
-    //process.chdir(cwd);
+    kraken.$directories.push(change);
 
-    kraken.environment.cwd = cwd;
-
-    return cwd;
+    //process.chdir(change.to);
+    kraken.environment.cwd = change.to;
+    return change.to;
   };
 
   kraken.start = function() {
