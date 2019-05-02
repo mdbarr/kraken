@@ -4,7 +4,7 @@ function fetch(kraken, step) {
   let command = 'git fetch';
 
   if (typeof step.fetch === 'string') {
-    command += ' ' + step.fetch;
+    command += ` ${ step.fetch }`;
   }
 
   if (step.all) {
@@ -14,7 +14,6 @@ function fetch(kraken, step) {
   if (step.tags) {
     command += ' --tags';
   }
-
 
   const result = kraken.exec(command);
 

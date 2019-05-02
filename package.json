@@ -14,7 +14,8 @@
     "lint": "eslint *.js modules/*.js"
   },
   "dependencies": {
-    "@mdbarr/uscript": "^0.1.0",
+    "@mdbarr/uscript": "^0.1.1",
+    "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
     "requireindex": "^1.2.0",
     "rimraf": "^2.6.3"
