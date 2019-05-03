@@ -81,6 +81,28 @@ function Kraken(options = {}) {
 
         kraken.cd();
       }
+    } else if (object.steps) {
+      console.log('WHEN', object.when);
+      if (!kraken.when(object)) {
+        return false;
+      }
+      console.log('WHEN<<');
+
+      if (object.cwd) {
+        kraken.cd(object.cwd);
+      }
+
+      const steps = [];
+
+      for (let step of object.steps) {
+        step = Object.assign({}, step);
+        kraken.prep(step);
+
+        steps.push(step);
+      }
+      steps.forEach(kraken.step);
+
+      kraken.cd();
     } else {
       for (const module in kraken.modules) {
         if (object.hasOwnProperty(module)) {
