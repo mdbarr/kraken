@@ -1,6 +1,6 @@
 'use strict';
 
-function checkout(kraken, step) {
+function yarn(kraken, step) {
   if (step.install !== false) {
     kraken.exec('yarn install');
   }
@@ -16,4 +16,4 @@ function checkout(kraken, step) {
   return result;
 }
 
-module.exports = checkout;
+module.exports = yarn;
