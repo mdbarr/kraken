@@ -25,10 +25,12 @@ function Kraken(options = {}) {
 
   kraken.modules = require('./modules');
 
-  kraken.prep = function(step, frame) {
+  kraken.prep = function(step, frame, shallow = false) {
     for (const property in step) {
       if (typeof step[property] === 'string') {
         step[property] = kraken.handlebars(step[property], frame);
+      } else if (!shallow && typeof step[property] === 'object' && step[property] !== null) {
+        kraken.prep(step[property], frame, shallow);
       }
     }
   };
@@ -72,7 +74,7 @@ function Kraken(options = {}) {
 
         for (let step of object.steps) {
           step = Object.assign({}, step);
-          kraken.prep(step, frame);
+          kraken.prep(step, frame, true);
 
           steps.push(step);
         }
@@ -104,6 +106,8 @@ function Kraken(options = {}) {
 
       kraken.cd();
     } else {
+      kraken.prep(object);
+
       for (const module in kraken.modules) {
         if (object.hasOwnProperty(module)) {
           console.log(`[${ module }] ${ object[module] }`);
@@ -179,12 +183,13 @@ function Kraken(options = {}) {
   kraken.exec = function(command, commandOptions) {
     if (options['dry-run'] || options.dryRun) {
       console.log('[TEST] >', command);
-    } else {
-      console.log('[EXEC] >', command);
-      const result = execSync(command, commandOptions).toString();
-      kraken.log.push(result);
-      console.log(result);
+      return command;
     }
+    console.log('[EXEC] >', command);
+    const result = execSync(command, commandOptions).toString();
+    kraken.log.push(result);
+    console.log(result);
+    return result;
   };
 
   kraken.$directories = [];
