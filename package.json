@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@mdbarr/uscript": "^0.1.1",
+    "barrkeep": "^2.0.1",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
     "requireindex": "^1.2.0",
