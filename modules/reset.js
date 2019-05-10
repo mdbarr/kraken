@@ -1,6 +1,6 @@
 'use strict';
 
-function reset(kraken, step) {
+async function reset(kraken, step) {
   let command = 'git reset';
 
   if (step.hard) {
@@ -11,7 +11,7 @@ function reset(kraken, step) {
     command += ` ${ step.reset }`;
   }
 
-  const result = kraken.exec(command);
+  const result = await kraken.exec(command);
 
   return result;
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-function checkout(kraken, step) {
+async function checkout(kraken, step) {
   let command = 'git checkout';
 
   if (step.force) {
@@ -11,7 +11,7 @@ function checkout(kraken, step) {
     command += ` ${ step.checkout }`;
   }
 
-  const result = kraken.exec(command);
+  const result = await kraken.exec(command);
 
   return result;
 }

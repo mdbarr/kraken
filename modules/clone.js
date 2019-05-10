@@ -1,6 +1,6 @@
 'use strict';
 
-function clone(kraken, step) {
+async function clone(kraken, step) {
   let url;
   let branch = 'master';
   let recursive = false;
@@ -39,8 +39,11 @@ function clone(kraken, step) {
     ];
   }
 
-  const result = steps.map(kraken.exec).join('');
-  console.log(result);
+  let result = '';
+  for (const substep of steps) {
+    result += await kraken.exec(substep);
+  }
+
   return result;
 }
 

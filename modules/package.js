@@ -1,6 +1,6 @@
 'use strict';
 
-function packager(kraken, step) {
+async function packager(kraken, step) {
   let command = 'tar -v -c';
 
   if (step.name.endsWith('gz')) {
@@ -13,7 +13,7 @@ function packager(kraken, step) {
 
   command += ` -f ${ step.name } ${ step.package }`;
 
-  const result = kraken.exec(command);
+  const result = await kraken.exec(command);
 
   return result;
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-function yarn(kraken, step) {
+async function yarn(kraken, step) {
   if (step.install !== false) {
     kraken.exec('yarn install');
   }
@@ -11,7 +11,7 @@ function yarn(kraken, step) {
     command += ` ${ step.args }`;
   }
 
-  const result = kraken.exec(command);
+  const result = await kraken.exec(command);
 
   return result;
 }

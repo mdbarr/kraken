@@ -1,6 +1,6 @@
 'use strict';
 
-function shell(kraken, step) {
+async function shell(kraken, step) {
   const command = step.shell;
 
   const options = {};
@@ -24,12 +24,10 @@ function shell(kraken, step) {
     options.encoding = step.encoding;
   }
 
-  const result = kraken.exec(command, options).trim();
-
-  console.pp(step);
+  const result = await kraken.exec(command, options);
 
   if (step.variable) {
-    kraken.environment[step.variable] = result;
+    kraken.environment[step.variable] = result.trim();
   }
 
   return result;

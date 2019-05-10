@@ -1,6 +1,6 @@
 'use strict';
 
-function fetch(kraken, step) {
+async function fetch(kraken, step) {
   let command = 'git fetch';
 
   if (typeof step.fetch === 'string') {
@@ -15,7 +15,7 @@ function fetch(kraken, step) {
     command += ' --tags';
   }
 
-  const result = kraken.exec(command);
+  const result = await kraken.exec(command);
 
   return result;
 }

@@ -5,19 +5,32 @@ require('barrkeep/pp');
 
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
 //const yaml = require('js-yaml');
-const mkdirp = require('mkdirp');
-const rimraf = require('rimraf');
 const minimist = require('minimist');
-const { execSync } = require('child_process');
+const style = require('barrkeep/style');
 const { Uscript } = require('@mdbarr/uscript');
+const mkdirp = util.promisify(require('mkdirp'));
+const rimraf = util.promisify(require('rimraf'));
+const exec = util.promisify(require('child_process').exec);
 
 const WORKSPACE = process.env.WORKSPACE || path.join(process.cwd(), './work');
 
 //////////
 
+function output(...args) {
+  process.stdout.write(`${ args.join('\n') }\n`);
+}
+
+function prompt(...args) {
+  output(style('kraken', 'fg: seagreen; style: bold') + style('> ', 'fg:grey; style:bold') + args.join(' '));
+}
+
 function Kraken(options = {}) {
   const kraken = this;
+
+  const verbose = Boolean(options.verbose);
+  const dryrun = Boolean(options['dry-run'] || options.dryRun);
 
   kraken.version = require('./package').version;
 
@@ -38,7 +51,7 @@ function Kraken(options = {}) {
   kraken.when = function(object, frame) {
     if (object.when !== undefined) {
       const when = kraken.handlebars(object.when, frame);
-      console.log('[WHEN]', object.when, when);
+      // console.log('[WHEN]', object.when, when);
 
       if (!when || when === 'false' || when === 'undefined' ||
           when === 'null' || when === '0') {
@@ -49,24 +62,26 @@ function Kraken(options = {}) {
     return true;
   };
 
-  kraken.step = function(object) {
-    console.pp(object);
-    if (object.foreach && object.steps) {
-      const steps = [];
+  kraken.step = async function(object) {
+    if (verbose && object.name) {
+      output(style(` # ${ object.name }`, 'grey'));
+    }
 
+    // console.pp(object);
+    if (object.foreach && object.steps) {
       const [ , variable, which ] = object.foreach.match(/^(.*?)\s+in\s+(.*?)$/i);
 
       const container = kraken.uscript.eval(which);
       for (const item in container) {
         const frame = Object.assign({ [variable]: item }, container[item]);
 
-        console.pp(frame);
+        // console.pp(frame);
 
-        console.log('WHEN', object.when);
+        // console.log('WHEN', object.when);
         if (!kraken.when(object, frame)) {
           continue;
         }
-        console.log('WHEN<<');
+        // console.log('WHEN<<');
 
         if (object.cwd) {
           kraken.cd(object.cwd, frame);
@@ -76,33 +91,28 @@ function Kraken(options = {}) {
           step = Object.assign({}, step);
           kraken.prep(step, frame, true);
 
-          steps.push(step);
+          await kraken.step(step);
         }
-        steps.reverse();
-        steps.forEach(kraken.step);
 
         kraken.cd();
       }
     } else if (object.steps) {
-      console.log('WHEN', object.when);
+      // console.log('WHEN', object.when);
       if (!kraken.when(object)) {
         return false;
       }
-      console.log('WHEN<<');
+      // console.log('WHEN<<');
 
       if (object.cwd) {
         kraken.cd(object.cwd);
       }
 
-      const steps = [];
-
       for (let step of object.steps) {
         step = Object.assign({}, step);
         kraken.prep(step);
 
-        steps.push(step);
+        await kraken.step(step);
       }
-      steps.forEach(kraken.step);
 
       kraken.cd();
     } else {
@@ -110,7 +120,7 @@ function Kraken(options = {}) {
 
       for (const module in kraken.modules) {
         if (object.hasOwnProperty(module)) {
-          console.log(`[${ module }] ${ object[module] }`);
+          // console.log(`[${ module }] ${ object[module] }`);
 
           if (!kraken.when(object)) {
             continue;
@@ -121,7 +131,7 @@ function Kraken(options = {}) {
           }
 
           // Try / Catch?
-          const result = kraken.modules[module](kraken, object);
+          const result = await kraken.modules[module](kraken, object);
 
           kraken.cd();
 
@@ -156,7 +166,10 @@ function Kraken(options = {}) {
   //////////
 
   kraken.config = require('./config');
-  kraken.steps = require('./release');
+  kraken.steps = require('./playbook');
+
+  //// console.log(yaml.safeDump(kraken.steps));
+  //process.exit(0);
 
   kraken.environment = {
     workspace: WORKSPACE,
@@ -180,16 +193,35 @@ function Kraken(options = {}) {
     });
   };
 
-  kraken.exec = function(command, commandOptions) {
-    if (options['dry-run'] || options.dryRun) {
-      console.log('[TEST] >', command);
+  kraken.exec = async function(command, commandOptions) {
+    if (dryrun) {
+      prompt(command);
       return command;
     }
-    console.log('[EXEC] >', command);
-    const result = execSync(command, commandOptions).toString();
+
+    const result = await exec(command, commandOptions).toString();
     kraken.log.push(result);
-    console.log(result);
-    return result;
+    // console.log(result.stdout);
+    return result.stdout;
+  };
+
+  kraken.mkdir = async function(directory) {
+    if (dryrun) {
+      prompt('mkdir -p', directory);
+    } else {
+      await mkdirp(directory);
+    }
+
+    return true;
+  };
+
+  kraken.rimraf = async function(item) {
+    if (dryrun) {
+      prompt('rm -rf', item);
+    } else {
+      await rimraf(item);
+    }
+    return true;
   };
 
   kraken.$directories = [];
@@ -213,12 +245,16 @@ function Kraken(options = {}) {
 
     kraken.$directories.push(change);
 
-    //process.chdir(change.to);
+    if (dryrun) {
+      prompt('cd', change.to);
+    } else {
+      process.chdir(change.to);
+    }
     kraken.environment.cwd = change.to;
     return change.to;
   };
 
-  kraken.start = function() {
+  kraken.start = async function() {
     const [ width ] = process.stdout.getWindowSize();
 
     const indent = ' '.repeat(Math.floor((width - 40) / 2));
@@ -227,26 +263,24 @@ function Kraken(options = {}) {
       replace(/\\e/g, '\u001b').
       replace(/^/mg, indent);
 
-    console.log();
-    console.log(banner);
-    console.log();
-    console.log(`Kraken Release Engineering v${ kraken.version }`);
-    console.log();
+    output();
+    output(banner);
+    output();
+    output(`Kraken Release Engineering v${ kraken.version }`);
+    output();
 
-    mkdirp.sync(kraken.environment.workspace);
+    await kraken.mkdir(kraken.environment.workspace);
+
     kraken.cd(kraken.environment.workspace);
 
     // Steps
-
     for (const step of kraken.steps) {
-      console.log(step);
-      kraken.step(step);
+      // console.log(step);
+      await kraken.step(step);
     }
 
-    //
-
-    process.chdir(__dirname);
-    rimraf.sync('./work');
+    kraken.cd();
+    await kraken.rimraf('./work'); // always?
   };
 }
 
