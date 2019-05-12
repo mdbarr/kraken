@@ -23,7 +23,13 @@ function output(...args) {
 }
 
 function prompt(...args) {
-  output(style('kraken', 'fg: seagreen; style: bold') + style('> ', 'fg:grey; style:bold') + args.join(' '));
+  output(style('[', 'fg:grey; style:bold') +
+         style('kraken', 'fg: seagreen3; style: bold') +
+         style('] ', 'fg:grey; style:bold') + args.join(' '));
+}
+
+function comment(...args) {
+  prompt(style(`# ${ args.join(' ') }`, 'grey'));
 }
 
 function Kraken(options = {}) {
@@ -64,7 +70,7 @@ function Kraken(options = {}) {
 
   kraken.step = async function(object) {
     if (verbose && object.name) {
-      output(style(` # ${ object.name }`, 'grey'));
+      comment(object.name);
     }
 
     // console.pp(object);
@@ -287,6 +293,7 @@ function Kraken(options = {}) {
 const args = minimist(process.argv.slice(2));
 
 args['dry-run'] = true;
+args.verbose = true;
 
 const kraken = new Kraken(args);
 kraken.start();

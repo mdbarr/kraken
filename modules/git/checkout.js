@@ -7,7 +7,7 @@ async function checkout(kraken, step) {
     command += ' -f';
   }
 
-  if (typeof step.checkout === 'string') {
+  if (typeof step.git_checkout === 'string') {
     command += ` ${ step.checkout }`;
   }
 

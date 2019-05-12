@@ -15,11 +15,12 @@
   },
   "dependencies": {
     "@mdbarr/uscript": "^0.1.1",
+    "aws-sdk": "^2.453.0",
     "barrkeep": "^2.0.1",
+    "glob": "^7.1.4",
     "inquirer": "^6.3.1",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
-    "requireindex": "^1.2.0",
     "rimraf": "^2.6.3"
   }
 }

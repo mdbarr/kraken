@@ -1,14 +1,34 @@
 'use strict';
 
-const index = require('requireindex')(__dirname);
+const glob = require('glob');
 
 const modules = {};
 
-for (const item in index) {
-  if (typeof index[item] === 'function') {
-    modules[item] = index[item];
-  } else if (typeof index[item] === 'object') {
-    Object.assign(modules, index[item]);
+const modulesDirectory = __dirname;
+
+const files = glob.sync(`${ modulesDirectory }/**/*.js`);
+
+for (const file of files) {
+  const name = file.replace(modulesDirectory, '').
+    replace(/^\//, '').
+    replace(/\.js$/, '').
+    replace(/\//g, '_');
+
+  if (name === 'index') {
+    continue;
+  }
+
+  console.log('got', file, name);
+  const module = require(file);
+
+  if (typeof module === 'function') {
+    modules[name] = module;
+  } else if (typeof module === 'object') {
+    const shortName = name.replace(/_[^_]+$/g, '');
+    for (const item in module) {
+      const subName = `${ shortName }_${ item }`;
+      modules[subName] = module[item];
+    }
   }
 }
 

@@ -5,17 +5,17 @@ async function clone(kraken, step) {
   let branch = 'master';
   let recursive = false;
 
-  if (typeof kraken.config[step.clone] === 'string') {
-    url = kraken.config[step.clone];
+  if (typeof kraken.config[step.git_clone] === 'string') {
+    url = kraken.config[step.git_clone];
   } else {
-    url = kraken.config[step.clone].url;
+    url = kraken.config[step.git_clone].url;
   }
 
-  if (kraken.config[step.clone].branch) {
-    branch = kraken.config[step.clone].branch;
+  if (kraken.config[step.git_clone].branch) {
+    branch = kraken.config[step.git_clone].branch;
   }
 
-  if (step.recursive || kraken.config[step.clone].recursive) {
+  if (step.recursive || kraken.config[step.git_clone].recursive) {
     recursive = true;
   }
 
@@ -35,7 +35,7 @@ async function clone(kraken, step) {
   } else {
     steps = [
       recursive ? `git clone ${ url } --recurse-submodules` : `git clone ${ url }`,
-      `cd ${ step.clone }`
+      `cd ${ step.git_clone }`
     ];
   }
 
