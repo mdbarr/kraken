@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@mdbarr/uscript": "^0.1.1",
-    "aws-sdk": "^2.495.0",
+    "aws-sdk": "^2.814.0",
     "barrkeep": "^2.2.3",
     "glob": "^7.1.4",
     "inquirer": "^6.5.0",
