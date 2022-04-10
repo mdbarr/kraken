@@ -19,7 +19,7 @@
     "barrkeep": "^2.2.3",
     "glob": "^7.1.4",
     "inquirer": "^6.5.0",
-    "minimist": "^1.2.0",
+    "minimist": "^1.2.6",
     "mkdirp": "^0.5.1",
     "rimraf": "^2.6.3"
   }
